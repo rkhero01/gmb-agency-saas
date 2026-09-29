@@ -1,6 +1,9 @@
+import { Router } from 'express';
 import healthRoutes from './health.routes.js';
 import authRoutes from './auth.routes.js';
 import teamRoutes from './team.routes.js';
+import clientRoutes from './client.routes.js';
+import locationRoutes from './location.routes.js';
 
 const router = Router();
 
@@ -8,13 +11,15 @@ const router = Router();
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/team', teamRoutes);
+router.use('/clients', clientRoutes);
+router.use('/locations', locationRoutes);
 
 // Root API information endpoint
 router.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'GMB Agency SaaS REST API',
-    version: '0.2.0',
+    version: '0.3.0',
     documentation: '/docs',
     endpoints: {
       health: '/api/v1/health',
@@ -29,6 +34,22 @@ router.get('/', (req, res) => {
         invite: '/api/v1/team/invite',
         updateRole: '/api/v1/team/:userId/role',
         updateStatus: '/api/v1/team/:userId/status',
+      },
+      clients: {
+        list: '/api/v1/clients',
+        create: '/api/v1/clients',
+        get: '/api/v1/clients/:clientId',
+        update: '/api/v1/clients/:clientId',
+        delete: '/api/v1/clients/:clientId',
+        locations: '/api/v1/clients/:clientId/locations',
+      },
+      locations: {
+        listByClient: '/api/v1/clients/:clientId/locations',
+        createForClient: '/api/v1/clients/:clientId/locations',
+        create: '/api/v1/locations',
+        get: '/api/v1/locations/:locationId',
+        update: '/api/v1/locations/:locationId',
+        delete: '/api/v1/locations/:locationId',
       },
     },
   });

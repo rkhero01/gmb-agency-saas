@@ -3,8 +3,8 @@ import React from 'react';
 const NAV_ITEMS = [
   { id: 'overview', label: 'Overview', icon: '📊' },
   { id: 'team', label: 'Team & RBAC', icon: '👥', tag: 'Phase 2' },
-  { id: 'clients', label: 'Clients', icon: '🏢', isFuture: true, tag: 'Phase 3' },
-  { id: 'locations', label: 'Locations', icon: '📍', isFuture: true, tag: 'Phase 3' },
+  { id: 'clients', label: 'Clients', icon: '🏢', tag: 'Phase 3' },
+  { id: 'locations', label: 'Locations', icon: '📍', tag: 'Phase 3' },
   { id: 'gbp', label: 'Google Profiles', icon: '🌐', isFuture: true, tag: 'Phase 4' },
   { id: 'reviews', label: 'Reviews & Replies', icon: '⭐', isFuture: true, tag: 'Phase 5' },
   { id: 'posts', label: 'Post Scheduling', icon: '📅', isFuture: true, tag: 'Phase 6' },
@@ -37,7 +37,7 @@ export function Sidebar({
           </svg>
         </div>
         <span className="brand-title">GMB SaaS</span>
-        <span className="brand-tag">v0.2</span>
+        <span className="brand-tag">v0.3</span>
       </div>
 
       {/* Navigation */}
@@ -66,8 +66,12 @@ export function Sidebar({
                 <span
                   className="badge-future"
                   style={{
-                    backgroundColor: item.id === 'team' ? 'rgba(99, 102, 241, 0.2)' : undefined,
-                    color: item.id === 'team' ? '#a5b4fc' : undefined,
+                    backgroundColor: ['team', 'clients', 'locations'].includes(item.id)
+                      ? 'rgba(99, 102, 241, 0.2)'
+                      : undefined,
+                    color: ['team', 'clients', 'locations'].includes(item.id)
+                      ? '#a5b4fc'
+                      : undefined,
                   }}
                 >
                   {item.tag}

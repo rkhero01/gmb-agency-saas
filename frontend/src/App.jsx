@@ -4,6 +4,8 @@ import { OverviewStats } from './components/dashboard/OverviewStats.jsx';
 import { TenantHealthWidget } from './components/dashboard/TenantHealthWidget.jsx';
 import { HierarchyPreview } from './components/dashboard/HierarchyPreview.jsx';
 import { TeamManagementView } from './components/team/TeamManagementView.jsx';
+import { ClientManagementView } from './components/client/ClientManagementView.jsx';
+import { LocationManagementView } from './components/location/LocationManagementView.jsx';
 import { LoginView } from './components/auth/LoginView.jsx';
 import {
   getBackendHealth,
@@ -23,8 +25,9 @@ export function App() {
   const [currentAgency, setCurrentAgency] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
 
-  // View Navigation: 'overview' | 'team'
+  // View Navigation: 'overview' | 'team' | 'clients' | 'locations'
   const [currentView, setCurrentView] = useState('overview');
+  const [selectedClient, setSelectedClient] = useState(null);
 
   // Health Check Fetcher
   const fetchHealth = useCallback(async () => {
@@ -223,13 +226,15 @@ export function App() {
                     </td>
                   </tr>
                   <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
-                    <td style={{ padding: '12px 14px', fontFamily: 'JetBrains Mono', color: 'var(--text-subtle)' }}>Phase 3</td>
+                    <td style={{ padding: '12px 14px', fontFamily: 'JetBrains Mono', color: '#6366f1' }}>Phase 3</td>
                     <td style={{ padding: '12px 14px', fontWeight: 600 }}>Client & Location CRUD</td>
                     <td style={{ padding: '12px 14px', color: 'var(--text-muted)' }}>
                       Brand portfolio management, branch address management, category assignment
                     </td>
                     <td style={{ padding: '12px 14px' }}>
-                      <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Queued</span>
+                      <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', padding: '3px 8px', borderRadius: 4 }}>
+                        ✓ Completed
+                      </span>
                     </td>
                   </tr>
                   <tr>
@@ -253,6 +258,26 @@ export function App() {
         <TeamManagementView
           currentUser={currentUser}
           currentAgency={currentAgency}
+        />
+      )}
+
+      {currentView === 'clients' && (
+        <ClientManagementView
+          currentUser={currentUser}
+          currentAgency={currentAgency}
+          onSelectClient={(client) => {
+            setSelectedClient(client);
+            setCurrentView('locations');
+          }}
+        />
+      )}
+
+      {currentView === 'locations' && (
+        <LocationManagementView
+          currentUser={currentUser}
+          currentAgency={currentAgency}
+          initialClient={selectedClient}
+          onBackToClients={() => setCurrentView('clients')}
         />
       )}
     </DashboardLayout>

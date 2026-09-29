@@ -160,6 +160,78 @@ export async function updateMemberStatus(userId, status) {
   return res.data;
 }
 
+/**
+ * Client Management API
+ */
+export async function listClients() {
+  const res = await request('/clients');
+  return res.data;
+}
+
+export async function getClient(clientId) {
+  const res = await request(`/clients/${clientId}`);
+  return res.data;
+}
+
+export async function createClient(data) {
+  const res = await request('/clients', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateClient(clientId, data) {
+  const res = await request(`/clients/${clientId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteClient(clientId) {
+  const res = await request(`/clients/${clientId}`, {
+    method: 'DELETE',
+  });
+  return res.data;
+}
+
+/**
+ * Location Management API
+ */
+export async function listLocations(clientId) {
+  const res = await request(`/clients/${clientId}/locations`);
+  return res.data;
+}
+
+export async function getLocation(locationId) {
+  const res = await request(`/locations/${locationId}`);
+  return res.data;
+}
+
+export async function createLocation(clientId, data) {
+  const res = await request(`/clients/${clientId}/locations`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateLocation(locationId, data) {
+  const res = await request(`/locations/${locationId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteLocation(locationId) {
+  const res = await request(`/locations/${locationId}`, {
+    method: 'DELETE',
+  });
+  return res.data;
+}
+
 export default {
   getStoredToken,
   setStoredToken,
@@ -173,4 +245,14 @@ export default {
   inviteTeamMember,
   updateMemberRole,
   updateMemberStatus,
+  listClients,
+  getClient,
+  createClient,
+  updateClient,
+  deleteClient,
+  listLocations,
+  getLocation,
+  createLocation,
+  updateLocation,
+  deleteLocation,
 };
