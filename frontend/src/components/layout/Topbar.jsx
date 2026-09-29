@@ -1,8 +1,22 @@
 import React from 'react';
 
-export function Topbar({ health, isRefreshingHealth, onRefreshHealth }) {
+export function Topbar({
+  health,
+  isRefreshingHealth,
+  onRefreshHealth,
+  currentUser,
+  onLogout,
+}) {
   const isHealthy = health?.status === 'healthy';
-  const hasError = !health && !isRefreshingHealth;
+
+  const userInitials = currentUser?.name
+    ? currentUser.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'U';
 
   return (
     <header className="topbar">
@@ -10,7 +24,7 @@ export function Topbar({ health, isRefreshingHealth, onRefreshHealth }) {
         <h1 className="page-title">Agency Command Center</h1>
         <div className="phase-indicator">
           <span style={{ fontSize: '0.65rem' }}>●</span>
-          <span>Phase 0: Foundation</span>
+          <span>Phase 2: Auth & Team RBAC</span>
         </div>
       </div>
 
@@ -27,7 +41,7 @@ export function Topbar({ health, isRefreshingHealth, onRefreshHealth }) {
             {isRefreshingHealth
               ? 'Checking API...'
               : isHealthy
-              ? `API Online (Uptime: ${health?.data?.uptimeSeconds ?? 0}s)`
+              ? `API Online (${health?.data?.uptimeSeconds ?? 0}s)`
               : 'API Offline'}
           </span>
           <button
@@ -41,13 +55,13 @@ export function Topbar({ health, isRefreshingHealth, onRefreshHealth }) {
           </button>
         </div>
 
-        {/* Agency Profile Avatar */}
+        {/* User Profile & Role Chip */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
-            padding: '6px 12px',
+            gap: 12,
+            padding: '4px 10px 4px 6px',
             background: 'rgba(255, 255, 255, 0.03)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-full)',
@@ -55,8 +69,8 @@ export function Topbar({ health, isRefreshingHealth, onRefreshHealth }) {
         >
           <div
             style={{
-              width: 28,
-              height: 28,
+              width: 30,
+              height: 30,
               borderRadius: '50%',
               background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
               display: 'flex',
@@ -67,10 +81,29 @@ export function Topbar({ health, isRefreshingHealth, onRefreshHealth }) {
               color: '#ffffff',
             }}
           >
-            AD
+            {userInitials}
           </div>
-          <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Agency Owner</span>
+          <div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#ffffff', lineHeight: 1.2 }}>
+              {currentUser?.name || 'Authenticated User'}
+            </div>
+            <div style={{ fontSize: '0.65rem', color: '#818cf8', textTransform: 'uppercase', fontWeight: 700 }}>
+              {currentUser?.role || 'Member'}
+            </div>
+          </div>
         </div>
+
+        {/* Logout Button */}
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="btn btn-secondary btn-sm"
+            title="Sign out of workspace"
+            style={{ fontSize: '0.75rem' }}
+          >
+            Sign Out
+          </button>
+        )}
       </div>
     </header>
   );

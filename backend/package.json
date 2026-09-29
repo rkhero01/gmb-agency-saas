@@ -8,6 +8,7 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "node src/tests/index.js",
+    "test:auth": "node src/tests/auth-rbac.test.js",
     "test:tenant": "node src/tests/tenant-isolation.test.js",
     "test:migrator": "node src/tests/migrator.test.js",
     "db:migrate": "node src/database/migrator.js up",
@@ -19,6 +20,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.13.1"
   },
   "engines": {

@@ -10,13 +10,13 @@ A production-ready, multi-tenant Software-as-a-Service (SaaS) platform architect
 - [Multi-Tenant Hierarchy](#multi-tenant-hierarchy)
 - [System Architecture](#system-architecture)
 - [Folder Structure](#folder-structure)
-- [Technology Decisions](#technology-decisions)
+- [Authentication & Team RBAC (Phase 2)](#authentication--team-rbac-phase-2)
 - [Prerequisites](#prerequisites)
 - [Local Setup](#local-setup)
   - [1. Install Dependencies](#1-install-dependencies)
   - [2. Environment Configuration](#2-environment-configuration)
-  - [3. PostgreSQL Database Setup & Migrations](#3-postgresql-database-setup--migrations)
-  - [4. Run Verification & Tenant Isolation Tests](#4-run-verification--tenant-isolation-tests)
+  - [3. PostgreSQL Setup & Migrations](#3-postgresql-setup--migrations)
+  - [4. Run Comprehensive Verification Tests](#4-run-comprehensive-verification-tests)
   - [5. Start Backend API Server](#5-start-backend-api-server)
   - [6. Start Frontend Dashboard](#6-start-frontend-dashboard)
 - [Planned Future Modules](#planned-future-modules)
@@ -32,6 +32,7 @@ Marketing agencies manage dozens to hundreds of local business listings on Googl
 - A multi-tenant agency portal where each agency has completely isolated workspaces.
 - Seamless multi-client hierarchy: `Agency -> Users -> Clients -> Locations -> Google Business Profiles`.
 - Cryptographic isolation, compound foreign keys, and PostgreSQL Row-Level Security to prevent any cross-agency data exposure.
+- Robust role-based access control with 5 team roles and final owner protection.
 
 ---
 
@@ -59,13 +60,17 @@ Every database query and API operation operates under a strictly resolved `agenc
 ┌────────────────────────────────────────────────────────┐
 │                   React + Vite SPA                     │
 │        (Agency Dashboard, Modern Vanilla CSS)          │
+│   ├── Authentication & Session State                   │
+│   ├── Agency Overview & KPI Dashboards                 │
+│   └── Team Management & RBAC View                      │
 └──────────────────────────┬─────────────────────────────┘
                            │ HTTP / JSON REST
                            ▼
 ┌────────────────────────────────────────────────────────┐
 │                  Node.js Express API                   │
 │   ├── Security Middleware (Helmet, CORS)               │
-│   ├── Tenant Context Middleware (Session-Derived)      │
+│   ├── Authenticate Middleware (JWT Cryptographic Claim)│
+│   ├── Centralized RBAC Middleware (Permissions Matrix) │
 │   ├── Service & Repository Layer                       │
 │   │   ├── AgencyRepository, UserRepository             │
 │   │   ├── ClientRepository, LocationRepository         │
@@ -75,7 +80,7 @@ Every database query and API operation operates under a strictly resolved `agenc
                            │
                            ▼
 ┌────────────────────────────────────────────────────────┐
-│                   PostgreSQL Database                  │
+│                   PostgreSQL 18 Database               │
 │       - Shared Database with Discriminator Column      │
 │       - Compound Foreign Keys (Integrity Bounds)       │
 │       - Agency Scoping + Row-Level Security (RLS)      │
@@ -100,11 +105,13 @@ gmb-agency-saas/
 │   ├── index.html            # Application entry HTML
 │   └── src/
 │       ├── components/
+│       │   ├── auth/         # LoginView, registration, session management
 │       │   ├── layout/       # App shell: Sidebar, Topbar, Layout
+│       │   ├── team/         # TeamManagementView, member invites, role changes
 │       │   ├── ui/           # Reusable metric cards, badges
 │       │   └── dashboard/    # Overview analytics, tenant health widget, hierarchy preview
-│       ├── services/         # Centralized API client (Fetch abstraction)
-│       ├── App.jsx           # Root application component
+│       ├── services/         # Centralized API client with JWT storage & auth methods
+│       ├── App.jsx           # Root application component with session & route protection
 │       ├── main.jsx          # DOM entry point
 │       └── index.css         # Modern design system & CSS custom properties
 │
@@ -112,23 +119,32 @@ gmb-agency-saas/
 │   ├── .env.example          # Backend-specific environment variables
 │   ├── package.json          # Backend dependencies & scripts
 │   └── src/
-│       ├── config/           # Validated environment configuration & DB pool
-│       ├── controllers/      # Route controllers (Health, Agency, etc.)
+│       ├── config/           # Validated environment configuration, DB pool, and permissions
+│       │   ├── env.js
+│       │   ├── database.js
+│       │   └── permissions.js# Centralized RBAC permission matrix & escalation rules
+│       ├── controllers/      # Route controllers (Auth, Team, Health)
 │       ├── database/         # Migration runner & tenant session context
 │       │   ├── migrator.js   # Automated migration executor & tracker
 │       │   └── session.js    # withTenantContext transaction helper (RLS)
-│       ├── middleware/       # Tenant isolation, error handler, not-found
+│       ├── middleware/       # JWT auth, RBAC authorizer, viewer safety, error handler
+│       │   ├── auth.js
+│       │   ├── tenantContext.js
+│       │   ├── notFound.js
+│       │   └── errorHandler.js
 │       ├── repositories/     # Data access layer strictly scoped by agency_id
 │       │   ├── agency.repository.js
-│       │   ├── user.repository.js (Bcrypt password hashing)
+│       │   ├── user.repository.js (Bcrypt password hashing & login counters)
 │       │   ├── client.repository.js
 │       │   ├── location.repository.js
 │       │   └── googleBusinessProfile.repository.js
-│       ├── routes/           # REST endpoints mapping (/api/v1/health)
-│       ├── services/         # Business logic layer (TenantService)
-│       ├── tests/            # Test suite (tenant isolation & migrator checks)
+│       ├── routes/           # REST endpoints mapping (/api/v1/auth, /api/v1/team, /health)
+│       ├── services/         # Business logic layer (AuthService, TeamService, TenantService)
+│       ├── tests/            # Test suite (tenant isolation, auth/RBAC, migrator checks)
+│       │   ├── auth-rbac.test.js
 │       │   ├── tenant-isolation.test.js
-│       │   └── migrator.test.js
+│       │   ├── migrator.test.js
+│       │   └── index.js
 │       ├── app.js            # Express application configuration & security
 │       └── server.js         # HTTP server listener & graceful shutdown
 │
@@ -136,7 +152,8 @@ gmb-agency-saas/
 │   ├── README.md             # Migration workflow & setup docs
 │   └── migrations/
 │       ├── 001_core_schema.sql         # Agencies, Users, Clients, Locations, GBP
-│       └── 002_row_level_security.sql  # Row-Level Security policies
+│       ├── 002_row_level_security.sql  # Row-Level Security policies
+│       └── 003_auth_and_team_rbac.sql  # User login tracking & composite indexes
 │
 ├── workers/                  # Background Jobs & Automation (Phase 4+)
 │   └── README.md             # Planned architecture for async sync workers
@@ -149,23 +166,20 @@ gmb-agency-saas/
 
 ---
 
-## Technology Decisions
+## Authentication & Team RBAC (Phase 2)
 
-1. **Frontend (React + Vite + Vanilla CSS)**
-   - **Vite**: Ultra-fast build times, hot module replacement (HMR), lightweight footprint.
-   - **React with clean JavaScript**: Agility, zero configuration bloat.
-   - **Modern Vanilla CSS**: Leverages CSS variables (custom properties), CSS grid/flexbox, glassmorphic accents, and responsive layout.
+### Five Centralized Roles
+- **`owner`**: Full agency governance, team management, ownership transfer, billing.
+- **`admin`**: Client and location management, team management up to admin.
+- **`manager`**: Operational management for assigned clients and locations.
+- **`specialist`**: Operational GBP publishing and review replies.
+- **`viewer`**: Read-only access across the tenant portfolio.
 
-2. **Backend (Node.js + Express REST API)**
-   - **Express**: Battle-tested, lightweight REST framework.
-   - **Layered Architecture**: Routes -> Controllers -> Services -> Repositories -> PostgreSQL.
-   - **Zero-Trust Tenant Security**: Tenant identity derived exclusively from authenticated user sessions (no raw header trust in production).
-   - **Password Security**: Bcrypt with salted rounds (`bcryptjs`). Plaintext passwords are never stored.
-
-3. **Database (PostgreSQL 14+)**
-   - **Multi-Tenant Strategy**: Shared database with discriminator column (`agency_id`) + compound foreign keys.
-   - **Compound Foreign Key Bounds**: `FOREIGN KEY (client_id, agency_id) REFERENCES clients(id, agency_id)` guarantees at the engine level that child locations cannot be associated with foreign agency clients.
-   - **Row-Level Security (RLS)**: Enforced via PostgreSQL policies conditioned on `app.current_agency_id`.
+### Core Security Invariants
+1. **Zero-Trust Header Invariant**: In production, `agency_id` is derived **exclusively** from cryptographic claims in the verified JWT session, completely ignoring client-controlled headers.
+2. **Unauthorized Role Escalation Prevention**: An actor cannot assign or alter a role equal to or higher than their own level. Admins cannot create, promote, or alter owners.
+3. **Final Active Owner Protection**: An agency must always have at least one active owner. Demoting or deactivating the last active owner is rejected with `400 FINAL_OWNER_PROTECTION`.
+4. **Viewer Read-Only Enforcement**: Mutation requests (`POST`, `PUT`, `PATCH`, `DELETE`) from viewers are rejected with `403 VIEWER_READ_ONLY`.
 
 ---
 
@@ -173,7 +187,7 @@ gmb-agency-saas/
 
 - **Node.js**: v18.0.0 or higher (Tested on Node v24 LTS)
 - **npm**: v9.0.0 or higher
-- **PostgreSQL**: v14+ (For live database execution; test runner includes automated fallback engine)
+- **PostgreSQL**: v14+ (Tested on PostgreSQL 18.6)
 
 ---
 
@@ -198,41 +212,37 @@ copy backend\.env.example backend\.env
 copy frontend\.env.example frontend\.env
 ```
 
-### 3. PostgreSQL Database Setup & Migrations
+Ensure your `backend/.env` has your PostgreSQL connection settings:
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=gmb_agency_saas
+DB_USER=postgres
+DB_PASSWORD=your_postgres_password
+JWT_SECRET=your_secure_jwt_secret_key_minimum_32_characters
+```
 
-For local PostgreSQL:
+### 3. PostgreSQL Setup & Migrations
+
 ```bash
-# 1. Create development database
-createdb gmb_agency_saas_dev
-
-# 2. Run automated migrations
+# Apply all database migrations (001, 002, 003)
 npm run db:migrate
 
-# 3. Check migration status
+# Inspect migration status
 npm run db:status
 ```
 
-### 4. Run Verification & Tenant Isolation Tests
-
-The project includes an automated test suite verifying tenant isolation and relational constraints:
+### 4. Run Comprehensive Verification Tests
 
 ```bash
-# Run all tests (tenant isolation + migration runner)
+# Run all tests (migration engine, tenant isolation, auth & team RBAC)
 npm test
 
-# Run tenant isolation test suite specifically
+# Run individual test suites
+npm run test:auth
 npm run test:tenant
+npm run test:migrator
 ```
-
-The test verifies:
-1. Agency A creation.
-2. Client A creation under Agency A.
-3. Location A creation under Client A.
-4. Agency B creation.
-5. Client B creation under Agency B.
-6. Agency A cannot access Client B.
-7. Agency B cannot access Client A.
-8. Location cannot reference a client belonging to another agency (proves compound FK constraint).
 
 ### 5. Start Backend API Server
 
@@ -246,7 +256,7 @@ The API server starts on `http://localhost:5000`. Health check is available at `
 ```bash
 npm run dev:frontend
 ```
-The Vite dashboard starts on `http://localhost:5173`.
+The Vite dashboard starts on `http://localhost:5173`. If not logged in, you will be prompted with the secure Sign-In screen with 1-click Demo credentials.
 
 ---
 
@@ -254,8 +264,8 @@ The Vite dashboard starts on `http://localhost:5173`.
 
 - **Phase 0**: Project Foundation *(Completed)*
 - **Phase 1**: Database Setup & Core Tenant Models *(Completed)*
-- **Phase 2**: Authentication & Team RBAC *(Next)*
-- **Phase 3**: Client & Location Management CRUD
+- **Phase 2**: Authentication & Team RBAC *(Completed)*
+- **Phase 3**: Client & Location Management CRUD *(Next)*
 - **Phase 4**: Google Cloud OAuth 2.0 & GBP API Integration
 - **Phase 5**: Review Management & AI Replies
 - **Phase 6**: Post Scheduling & Media Library

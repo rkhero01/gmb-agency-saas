@@ -1,16 +1,32 @@
-import { runTenantIsolationVerification } from './tenant-isolation.test.js';
 import { testMigrator } from './migrator.test.js';
+import { runTenantIsolationVerification } from './tenant-isolation.test.js';
+import { runAuthRbacVerification } from './auth-rbac.test.js';
 
 async function runAllTests() {
-  console.log('🚀 Running Complete Phase 1 Verification Suite...\n');
+  console.log('🚀 Running Complete Test Suite (Phase 0, 1 & 2)...\n');
 
   try {
+    console.log('===========================================================');
+    console.log('1. Database Migration Engine Tests');
+    console.log('===========================================================');
     await testMigrator();
+
+    console.log('\n===========================================================');
+    console.log('2. Multi-Tenant Domain Hierarchy & Isolation Tests');
+    console.log('===========================================================');
     await runTenantIsolationVerification();
-    console.log('\n🎉 ALL PHASE 1 TESTS PASSED SUCCESSFULLY!');
+
+    console.log('\n===========================================================');
+    console.log('3. Authentication & Team RBAC Tests');
+    console.log('===========================================================');
+    await runAuthRbacVerification();
+
+    console.log('\n===========================================================');
+    console.log('🎉 ALL TESTS PASSED SUCCESSFULLY! (PHASES 0, 1 & 2)');
+    console.log('===========================================================');
     process.exit(0);
   } catch (err) {
-    console.error('\n❌ Test suite failure:', err);
+    console.error('\n❌ Test suite failed:', err);
     process.exit(1);
   }
 }
