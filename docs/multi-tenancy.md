@@ -1,127 +1,124 @@
-# Multi-Tenancy Architecture & Isolation Strategy
+# Multi-Tenancy Architecture & Security Specifications
 
-## Overview
+## 1. Overview
 
-In an agency SaaS, the greatest risk is **accidental cross-agency data exposure**. An agency must never be able to view, edit, or leak another agency's clients, locations, reviews, or Google credentials.
+In an agency SaaS, the highest-priority architectural requirement is **absolute tenant isolation**. An agency managing dozens of client brands and physical locations must never be able to access, modify, or leak data belonging to another agency.
 
-This document details the multi-tenant architecture and enforcement mechanisms implemented in GMB Agency SaaS.
-
----
-
-## Multi-Tenant Model
-
-We utilize a **Shared Database with Discriminator Column (`agency_id`) + Row-Level Security (RLS)** strategy.
-
-### Why this model?
-1. **Cost & Operational Efficiency**: Agencies share database resources, minimizing maintenance overhead and infrastructure costs compared to separate databases per tenant.
-2. **Strict Isolation**: By enforcing `agency_id` on every table and combining application-level scoping with database-level RLS, data leakage risks are mitigated at two independent layers.
-3. **Seamless Aggregation**: Multi-tenant metrics and background workers can run efficient batch operations without needing hundreds of disparate database connection pools.
+This document details the multi-tenant architecture, data model constraints, and security enforcement mechanisms implemented in GMB Agency SaaS.
 
 ---
 
-## Tenant Data Hierarchy & Constraints
+## 2. Multi-Tenant Relational Model
 
-All relational entities strictly reference `agency_id`:
+We enforce multi-tenancy at two distinct levels:
+1. **Application / Repository Level**: Every query requires an explicit `agency_id` filter.
+2. **Database Level**: Compound foreign keys and PostgreSQL Row-Level Security (RLS) enforce isolation inside the database engine itself.
+
+### Entity Relationship & Isolation Tree
 
 ```
-agencies
-  └── id (UUID, PK)
-
-users
-  ├── id (UUID, PK)
-  ├── agency_id (UUID, FK -> agencies.id ON DELETE CASCADE)
-  └── ...
-
-clients
-  ├── id (UUID, PK)
-  ├── agency_id (UUID, FK -> agencies.id ON DELETE CASCADE)
-  └── ...
-
-locations
-  ├── id (UUID, PK)
-  ├── agency_id (UUID, FK -> agencies.id ON DELETE CASCADE)
-  ├── client_id (UUID, FK -> clients.id ON DELETE CASCADE)
-  └── ...
-
-gmb_profiles
-  ├── id (UUID, PK)
-  ├── agency_id (UUID, FK -> agencies.id ON DELETE CASCADE)
-  ├── location_id (UUID, FK -> locations.id ON DELETE CASCADE)
-  └── ...
-```
-
-### Key Foreign Key & Compound Constraints
-To prevent assigning a location belonging to Client A to a different agency:
-- Tables include compound unique constraints: `UNIQUE(id, agency_id)`
-- Foreign keys between child and parent tables enforce both parent ID and parent agency ID:
-  ```sql
-  FOREIGN KEY (client_id, agency_id) REFERENCES clients(id, agency_id)
-  ```
-  This guarantees that even if an attacker attempts an IDOR (Insecure Direct Object Reference) by sending a foreign `client_id`, the database constraint rejects the insert or update.
-
----
-
-## Application-Level Tenant Isolation
-
-### 1. Tenant Context Middleware (`tenantContext.js`)
-When an HTTP request enters the backend:
-1. Authentication validates the user's JWT.
-2. The user's verified `agency_id` is extracted from the session/token.
-3. A `tenantContext` object is attached to `req.tenant`:
-   ```javascript
-   req.tenant = {
-     agencyId: verifiedUser.agency_id,
-     userId: verifiedUser.id,
-     role: verifiedUser.role
-   };
-   ```
-
-### 2. Query Scoping Guard
-Every database query function must require `agencyId` as an explicit parameter:
-```javascript
-// Good: Always strictly scoped
-export async function getClientById(agencyId, clientId) {
-  return db.query(
-    'SELECT * FROM clients WHERE id = $1 AND agency_id = $2',
-    [clientId, agencyId]
-  );
-}
-
-// Prohibited: Unscoped access
-export async function getClientByIdUnsafe(clientId) {
-  // VIOLATION: Cross-tenant vulnerability!
-  return db.query('SELECT * FROM clients WHERE id = $1', [clientId]);
-}
+agencies (id, name, slug, status)
+  │
+  ├── users (id, agency_id, email, password_hash, role, status)
+  │     └── CONSTRAINT uq_agency_user_email UNIQUE (agency_id, email)
+  │     └── CONSTRAINT uq_users_id_agency UNIQUE (id, agency_id)
+  │
+  └── clients (id, agency_id, name, business_name, email, phone, website, status)
+        │ └── CONSTRAINT uq_clients_id_agency UNIQUE (id, agency_id)
+        │
+        └── locations (id, agency_id, client_id, name, address..., status)
+              │ └── CONSTRAINT fk_locations_client FOREIGN KEY (client_id, agency_id)
+              │         REFERENCES clients(id, agency_id) ON DELETE CASCADE
+              │ └── CONSTRAINT uq_locations_id_agency UNIQUE (id, agency_id)
+              │
+              └── google_business_profiles (id, agency_id, client_id, location_id..., status)
+                    └── CONSTRAINT fk_gbp_location FOREIGN KEY (location_id, agency_id)
+                            REFERENCES locations(id, agency_id) ON DELETE CASCADE
 ```
 
 ---
 
-## Database-Level Row-Level Security (RLS)
+## 3. Database-Level Cross-Tenant Reference Prevention
 
-For maximum security in production, PostgreSQL Row-Level Security is enabled on multi-tenant tables:
+A common multi-tenant vulnerability occurs when an attacker in Agency A sends an ID belonging to a client in Agency B when creating a location:
+```
+POST /api/v1/locations
+Body: { "clientId": "<Agency_B_Client_UUID>", "name": "Unauthorized Location" }
+```
+
+In GMB Agency SaaS, the database schema **structurally rejects** this request via compound foreign keys:
 
 ```sql
--- Enable RLS
+CONSTRAINT fk_locations_client FOREIGN KEY (client_id, agency_id)
+    REFERENCES clients(id, agency_id) ON DELETE CASCADE;
+```
+
+Because `clients` enforces `UNIQUE(id, agency_id)`, PostgreSQL verifies that both `client_id` AND `agency_id` exist together in the parent table. If Agency A attempts to reference a client belonging to Agency B, PostgreSQL raises a foreign key violation:
+```
+insert or update on table "locations" violates foreign key constraint "fk_locations_client"
+```
+
+---
+
+## 4. Tenant Context & Session Derivation (Zero-Trust Header Invariant)
+
+### CRITICAL PRODUCTION RULE:
+**A raw client-supplied `x-agency-id` header MUST NEVER be treated as a trusted authentication mechanism in production.**
+
+### Intended Security Model:
+1. **Authentication**: Users submit credentials to `/api/v1/auth/login`.
+2. **Verification**: The server verifies the password hash, issues a signed JWT containing `{ userId, agencyId, role }` or creates a server-side session.
+3. **Session Resolution**: Authentication middleware cryptographically validates the token and populates `req.user = { id, agency_id, role }`.
+4. **Tenant Context Attachment**: `req.tenant` is derived *exclusively* from `req.user.agency_id`.
+5. **Development Override Safeguard**: A client-supplied `x-agency-id` header is accepted **only** in development or automated testing (`NODE_ENV !== 'production'`) to facilitate isolated testing before Phase 2 authentication is complete.
+
+---
+
+## 5. PostgreSQL Row-Level Security (RLS)
+
+In addition to application query filters, PostgreSQL Row-Level Security provides defense-in-depth:
+
+```sql
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE google_business_profiles ENABLE ROW LEVEL SECURITY;
 
--- Set policy based on session variable
-CREATE POLICY agency_isolation_policy ON clients
-  FOR ALL
-  USING (agency_id = NULLIF(current_setting('app.current_agency_id', true), '')::uuid);
+CREATE POLICY tenant_isolation_clients ON clients
+    FOR ALL
+    USING (agency_id = NULLIF(current_setting('app.current_agency_id', true), '')::uuid);
 ```
 
-When database connections are retrieved from the pool, the application sets `app.current_agency_id` inside the transaction:
-```sql
-SET LOCAL app.current_agency_id = 'c0a80101-0000-0000-0000-000000000001';
+When database connections execute via [`withTenantContext`](file:///c:/Users/Admin/Downloads/gmb-agency-saas/backend/src/database/session.js):
+```javascript
+await client.query('SELECT set_config($1, $2, true)', ['app.current_agency_id', agencyId]);
 ```
-
-Even if developer code accidentally forgets an `agency_id` filter in a raw query, the PostgreSQL engine automatically strips rows belonging to other agencies.
+The session parameter is local to that transaction (`is_local = true`), guaranteeing that queries within the transaction cannot access any row with a mismatched `agency_id`.
 
 ---
 
-## Audit & Prevention Checklist
+## 6. User Roles & Permissions
 
-- [x] Every multi-tenant table has an indexed `agency_id` column.
-- [x] Compound foreign keys enforce that parent-child relationships share the same `agency_id`.
-- [x] Controllers never trust client-supplied tenant identifiers in request bodies.
-- [x] Background workers explicitly pass tenant context into each queued job payload.
+Users belong to an agency and have one of five strictly validated roles:
+
+| Role | Hierarchy Level | Capabilities |
+| :--- | :--- | :--- |
+| **`owner`** | 1 | Full agency control, billing, team management, workspace settings |
+| **`admin`** | 2 | Client creation, location management, team user invites |
+| **`manager`** | 3 | Managing assigned clients & locations, publishing posts, replying to reviews |
+| **`specialist`** | 4 | Drafting posts, preparing review responses, analyzing reports |
+| **`viewer`** | 5 | Read-only access to client and location metrics |
+
+---
+
+## 7. Verification Testing
+
+The system includes automated tenant-isolation verification in [`backend/src/tests/tenant-isolation.test.js`](file:///c:/Users/Admin/Downloads/gmb-agency-saas/backend/src/tests/tenant-isolation.test.js):
+
+1. Creates Agency A.
+2. Creates Client A under Agency A.
+3. Creates Location A under Client A.
+4. Creates Agency B.
+5. Creates Client B under Agency B.
+6. Verifies Agency A cannot access Client B.
+7. Verifies Agency B cannot access Client A.
+8. Verifies Location cannot reference a client belonging to another agency (FK violation).

@@ -7,18 +7,25 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "test": "node --test"
+    "test": "node src/tests/index.js",
+    "test:tenant": "node src/tests/tenant-isolation.test.js",
+    "test:migrator": "node src/tests/migrator.test.js",
+    "db:migrate": "node src/database/migrator.js up",
+    "db:status": "node src/database/migrator.js status"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
     "pg": "^8.13.1"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=18.0.0"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "pg-mem": "^3.0.14"
+  }
 }
