@@ -4,6 +4,7 @@ import authRoutes from './auth.routes.js';
 import teamRoutes from './team.routes.js';
 import clientRoutes from './client.routes.js';
 import locationRoutes from './location.routes.js';
+import googleRoutes from './google.routes.js';
 
 const router = Router();
 
@@ -13,13 +14,14 @@ router.use('/auth', authRoutes);
 router.use('/team', teamRoutes);
 router.use('/clients', clientRoutes);
 router.use('/locations', locationRoutes);
+router.use('/google', googleRoutes);
 
 // Root API information endpoint
 router.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'GMB Agency SaaS REST API',
-    version: '0.3.0',
+    version: '0.4.0',
     documentation: '/docs',
     endpoints: {
       health: '/api/v1/health',
@@ -50,6 +52,15 @@ router.get('/', (req, res) => {
         get: '/api/v1/locations/:locationId',
         update: '/api/v1/locations/:locationId',
         delete: '/api/v1/locations/:locationId',
+      },
+      google: {
+        connect: '/api/v1/google/connect',
+        callback: '/api/v1/google/callback',
+        status: '/api/v1/google/status',
+        accounts: '/api/v1/google/accounts',
+        locations: '/api/v1/google/locations',
+        linkLocation: '/api/v1/google/locations/:locationId/link',
+        disconnect: '/api/v1/google/disconnect',
       },
     },
   });

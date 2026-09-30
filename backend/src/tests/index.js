@@ -2,9 +2,10 @@ import { testMigrator } from './migrator.test.js';
 import { runTenantIsolationVerification } from './tenant-isolation.test.js';
 import { runAuthRbacVerification } from './auth-rbac.test.js';
 import { runClientLocationCrudVerification } from './client-location-crud.test.js';
+import { runGoogleOAuthGbpVerification } from './google-oauth-gbp.test.js';
 
 async function runAllTests() {
-  console.log('🚀 Running Complete Test Suite (Phase 0, 1, 2 & 3)...\n');
+  console.log('🚀 Running Complete Test Suite (Phases 0, 1, 2, 3 & 4)...\n');
 
   try {
     console.log('===========================================================');
@@ -28,7 +29,12 @@ async function runAllTests() {
     await runClientLocationCrudVerification();
 
     console.log('\n===========================================================');
-    console.log('🎉 ALL TESTS PASSED SUCCESSFULLY! (PHASES 0, 1, 2 & 3)');
+    console.log('5. Google Cloud OAuth 2.0 & GBP Tests');
+    console.log('===========================================================');
+    await runGoogleOAuthGbpVerification();
+
+    console.log('\n===========================================================');
+    console.log('🎉 ALL TESTS PASSED SUCCESSFULLY! (PHASES 0, 1, 2, 3 & 4)');
     console.log('===========================================================');
     process.exit(0);
   } catch (err) {

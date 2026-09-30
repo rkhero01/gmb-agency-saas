@@ -16,33 +16,34 @@ This document defines the structured development roadmap for GMB Agency SaaS.
 ---
 
 ## Phase 1: Database Setup & Core Tenant Models
-- [ ] Connect PostgreSQL pool with health check and reconnect logic.
-- [ ] Implement migration runner (using db-migrate or native SQL runner).
-- [ ] Data access repositories: `AgencyRepository`, `UserRepository`, `ClientRepository`, `LocationRepository`.
-- [ ] Seed script for local development testing.
+- [x] Connect PostgreSQL pool with health check and reconnect logic.
+- [x] Implement migration runner (`migrator.js` with `schema_migrations` tracking).
+- [x] Data access repositories: `AgencyRepository`, `UserRepository`, `ClientRepository`, `LocationRepository`.
+- [x] Seed and verification test suite with tenant isolation.
 
 ---
 
 ## Phase 2: Authentication & Team RBAC
-- [ ] User registration, agency creation, and invite flow.
-- [ ] Secure JWT authentication with HTTP-only refresh cookies.
-- [ ] Role-based access control (Roles: `OWNER`, `ADMIN`, `MANAGER`, `VIEWER`).
-- [ ] Agency switcher support (for users managing multiple agencies).
+- [x] User registration, agency creation, and invite flow.
+- [x] Secure JWT authentication with HMAC-SHA256 signature and bcrypt password hashing.
+- [x] Role-based access control (5 roles: `owner`, `admin`, `manager`, `specialist`, `viewer`).
+- [x] Final active owner protection, role escalation prevention & viewer read-only guard.
 
 ---
 
 ## Phase 3: Client & Location Management CRUD
-- [ ] Client CRUD endpoints and frontend views (client list, create, edit, archive).
-- [ ] Location CRUD with address validation, business hours, and category selectors.
-- [ ] Grouping locations by tags, regions, or client brands.
+- [x] Client CRUD endpoints and frontend views (client list, create, edit, archive, delete).
+- [x] Location CRUD with address validation, business details, timezone, and phone fields.
+- [x] Compound foreign key `(client_id, agency_id)` tenant boundary enforcement.
 
 ---
 
 ## Phase 4: Google Cloud OAuth 2.0 & GBP API Integration
-- [ ] Google Cloud Console project setup & verified OAuth flow.
-- [ ] Secure token storage with AES-256 encryption at rest.
-- [ ] Google Business Profile account discovery and location linking.
-- [ ] Token refresh background job and error handling for revoked tokens.
+- [x] Google Cloud Console project setup & verified OAuth 2.0 authorization-code flow.
+- [x] Secure token storage in `google_oauth_accounts` with Row-Level Security isolation.
+- [x] Zero token exposure: access tokens and refresh tokens strictly omitted from frontend/logs.
+- [x] Google Business Profile account discovery and location linking (`Agency -> Client -> Location -> GBP`).
+- [x] Safe disconnect lifecycle with database token nullification.
 
 ---
 

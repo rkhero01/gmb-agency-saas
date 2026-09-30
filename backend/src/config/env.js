@@ -27,5 +27,16 @@ export const env = {
     SECRET: process.env.JWT_SECRET || 'dev_secret_replace_in_production',
     EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   },
+  GOOGLE: {
+    CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+    CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
+    REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/v1/google/callback',
+    SCOPES: [
+      'openid',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/business.manage',
+    ],
+  },
   IS_PRODUCTION: process.env.NODE_ENV === 'production',
 };

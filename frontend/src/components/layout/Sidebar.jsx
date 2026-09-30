@@ -5,7 +5,7 @@ const NAV_ITEMS = [
   { id: 'team', label: 'Team & RBAC', icon: '👥', tag: 'Phase 2' },
   { id: 'clients', label: 'Clients', icon: '🏢', tag: 'Phase 3' },
   { id: 'locations', label: 'Locations', icon: '📍', tag: 'Phase 3' },
-  { id: 'gbp', label: 'Google Profiles', icon: '🌐', isFuture: true, tag: 'Phase 4' },
+  { id: 'gbp', label: 'Google Profiles', icon: '🌐', tag: 'Phase 4' },
   { id: 'reviews', label: 'Reviews & Replies', icon: '⭐', isFuture: true, tag: 'Phase 5' },
   { id: 'posts', label: 'Post Scheduling', icon: '📅', isFuture: true, tag: 'Phase 6' },
   { id: 'analytics', label: 'Analytics & Reports', icon: '📈', isFuture: true, tag: 'Phase 7' },
@@ -37,7 +37,7 @@ export function Sidebar({
           </svg>
         </div>
         <span className="brand-title">GMB SaaS</span>
-        <span className="brand-tag">v0.3</span>
+        <span className="brand-tag">v0.4</span>
       </div>
 
       {/* Navigation */}
@@ -66,10 +66,10 @@ export function Sidebar({
                 <span
                   className="badge-future"
                   style={{
-                    backgroundColor: ['team', 'clients', 'locations'].includes(item.id)
+                    backgroundColor: ['team', 'clients', 'locations', 'gbp'].includes(item.id)
                       ? 'rgba(99, 102, 241, 0.2)'
                       : undefined,
-                    color: ['team', 'clients', 'locations'].includes(item.id)
+                    color: ['team', 'clients', 'locations', 'gbp'].includes(item.id)
                       ? '#a5b4fc'
                       : undefined,
                   }}

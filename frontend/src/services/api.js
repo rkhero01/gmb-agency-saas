@@ -232,6 +232,57 @@ export async function deleteLocation(locationId) {
   return res.data;
 }
 
+/**
+ * Google Cloud OAuth & Business Profile API
+ */
+export async function getGoogleConnectUrl() {
+  const res = await request('/google/connect');
+  return res.data;
+}
+
+export async function getGoogleStatus() {
+  const res = await request('/google/status');
+  return res.data;
+}
+
+export async function getGoogleAccounts() {
+  const res = await request('/google/accounts');
+  return res.data;
+}
+
+export async function getGoogleLocations(accountId) {
+  const query = accountId ? `?accountId=${encodeURIComponent(accountId)}` : '';
+  const res = await request(`/google/locations${query}`);
+  return res.data;
+}
+
+export async function getLinkedProfiles() {
+  const res = await request('/google/profiles');
+  return res.data;
+}
+
+export async function linkGoogleLocation(locationId, linkData) {
+  const res = await request(`/google/locations/${locationId}/link`, {
+    method: 'POST',
+    body: JSON.stringify(linkData),
+  });
+  return res.data;
+}
+
+export async function unlinkGoogleLocation(locationId) {
+  const res = await request(`/google/locations/${locationId}/link`, {
+    method: 'DELETE',
+  });
+  return res.data;
+}
+
+export async function disconnectGoogle() {
+  const res = await request('/google/disconnect', {
+    method: 'POST',
+  });
+  return res.data;
+}
+
 export default {
   getStoredToken,
   setStoredToken,
@@ -255,4 +306,12 @@ export default {
   createLocation,
   updateLocation,
   deleteLocation,
+  getGoogleConnectUrl,
+  getGoogleStatus,
+  getGoogleAccounts,
+  getGoogleLocations,
+  getLinkedProfiles,
+  linkGoogleLocation,
+  unlinkGoogleLocation,
+  disconnectGoogle,
 };

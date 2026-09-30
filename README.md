@@ -137,12 +137,16 @@ gmb-agency-saas/
 │       │   ├── user.repository.js (Bcrypt password hashing & login counters)
 │       │   ├── client.repository.js
 │       │   ├── location.repository.js
+│       │   ├── googleOAuth.repository.js
 │       │   └── googleBusinessProfile.repository.js
-│       ├── routes/           # REST endpoints mapping (/api/v1/auth, /api/v1/team, /health)
-│       ├── services/         # Business logic layer (AuthService, TeamService, TenantService)
-│       ├── tests/            # Test suite (tenant isolation, auth/RBAC, migrator checks)
+│       ├── routes/           # REST endpoints mapping (/auth, /team, /clients, /locations, /google)
+│       ├── services/         # Business logic layer (Auth, Team, Client, Location, Google)
+│       │   └── google/       # Google OAuth 2.0 & Business Profile service
+│       ├── tests/            # Test suite (isolation, RBAC, CRUD, Google OAuth)
 │       │   ├── auth-rbac.test.js
 │       │   ├── tenant-isolation.test.js
+│       │   ├── client-location.test.js
+│       │   ├── google-oauth-gbp.test.js
 │       │   ├── migrator.test.js
 │       │   └── index.js
 │       ├── app.js            # Express application configuration & security
@@ -153,9 +157,10 @@ gmb-agency-saas/
 │   └── migrations/
 │       ├── 001_core_schema.sql         # Agencies, Users, Clients, Locations, GBP
 │       ├── 002_row_level_security.sql  # Row-Level Security policies
-│       └── 003_auth_and_team_rbac.sql  # User login tracking & composite indexes
+│       ├── 003_auth_and_team_rbac.sql  # User login tracking & composite indexes
+│       └── 004_google_oauth.sql        # Google OAuth credentials & multi-tenant isolation
 │
-├── workers/                  # Background Jobs & Automation (Phase 4+)
+├── workers/                  # Background Jobs & Automation (Phase 5+)
 │   └── README.md             # Planned architecture for async sync workers
 │
 └── docs/                     # Architectural & Technical Specifications
@@ -166,20 +171,53 @@ gmb-agency-saas/
 
 ---
 
-## Authentication & Team RBAC (Phase 2)
+## Google Cloud OAuth 2.0 & GBP API Integration (Phase 4)
 
-### Five Centralized Roles
-- **`owner`**: Full agency governance, team management, ownership transfer, billing.
-- **`admin`**: Client and location management, team management up to admin.
-- **`manager`**: Operational management for assigned clients and locations.
-- **`specialist`**: Operational GBP publishing and review replies.
-- **`viewer`**: Read-only access across the tenant portfolio.
+### 1. Google Cloud Project Setup
+1. Open the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create or select a Google Cloud project (e.g. `gmb-agency-saas`).
+3. Enable the following APIs in **APIs & Services > Library**:
+   - **Google Business Profile API** (`mybusiness.googleapis.com`)
+   - **My Business Business Information API** (`mybusinessbusinessinformation.googleapis.com`)
+   - **My Business Account Management API** (`mybusinessaccountmanagement.googleapis.com`)
+   - **Google OAuth 2.0 API** (`oauth2.googleapis.com`)
+4. Configure the **OAuth Consent Screen** (User type: External, publish status: Testing).
+5. Add test users (Google accounts) who will test authorizing business profiles.
 
-### Core Security Invariants
-1. **Zero-Trust Header Invariant**: In production, `agency_id` is derived **exclusively** from cryptographic claims in the verified JWT session, completely ignoring client-controlled headers.
-2. **Unauthorized Role Escalation Prevention**: An actor cannot assign or alter a role equal to or higher than their own level. Admins cannot create, promote, or alter owners.
-3. **Final Active Owner Protection**: An agency must always have at least one active owner. Demoting or deactivating the last active owner is rejected with `400 FINAL_OWNER_PROTECTION`.
-4. **Viewer Read-Only Enforcement**: Mutation requests (`POST`, `PUT`, `PATCH`, `DELETE`) from viewers are rejected with `403 VIEWER_READ_ONLY`.
+### 2. Required OAuth Credentials
+1. Go to **APIs & Services > Credentials > Create Credentials > OAuth client ID**.
+2. Application type: **Web application**.
+3. **Authorized JavaScript origins**:
+   - Local: `http://localhost:5173`
+   - Production: `https://your-production-domain.com`
+4. **Authorized redirect URIs**:
+   - Local: `http://localhost:5000/api/v1/google/callback`
+   - Production: `https://api.your-production-domain.com/api/v1/google/callback`
+5. Copy the generated **Client ID** and **Client Secret**.
+
+### 3. Required Minimum Scopes
+To adhere to the principle of least privilege, only the minimum scopes required for GBP functionality are requested:
+- `openid`: OpenID authentication.
+- `https://www.googleapis.com/auth/userinfo.email`: Read connected Google account email.
+- `https://www.googleapis.com/auth/userinfo.profile`: Read account holder name and avatar.
+- `https://www.googleapis.com/auth/business.manage`: Manage Google Business listings, locations, and profiles.
+
+### 4. Environment Variables
+Add to your `backend/.env`:
+```env
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-your_google_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:5000/api/v1/google/callback
+```
+*(Never commit real Google credentials or client secrets to source control!)*
+
+### 5. Security Invariants
+- **Zero Token Leakage**: Access tokens and refresh tokens are strictly masked in all repository responses and API outputs. They are NEVER sent to the frontend or logged in plaintext.
+- **Server-Side Token Exchange**: The frontend never handles authorization codes or client secrets.
+- **HMAC-SHA256 Anti-CSRF State**: Every OAuth flow generates a cryptographically signed state token embedding `{ agencyId, userId, nonce }` verified on callback.
+- **Multi-Tenant Token Isolation**: Stored in `google_oauth_accounts` protected by PostgreSQL Row-Level Security (`agency_id = current_setting('app.current_agency_id')`).
+- **Domain Hierarchy Association**: Google Business locations are strictly linked down the hierarchy:
+  `Agency -> Client -> Location -> Google Business Profile`. Cross-agency linking is mathematically prevented.
 
 ---
 
@@ -212,7 +250,7 @@ copy backend\.env.example backend\.env
 copy frontend\.env.example frontend\.env
 ```
 
-Ensure your `backend/.env` has your PostgreSQL connection settings:
+Ensure your `backend/.env` has your PostgreSQL connection settings and Google OAuth credentials:
 ```env
 DB_HOST=localhost
 DB_PORT=5432
@@ -220,12 +258,17 @@ DB_NAME=gmb_agency_saas
 DB_USER=postgres
 DB_PASSWORD=your_postgres_password
 JWT_SECRET=your_secure_jwt_secret_key_minimum_32_characters
+
+# Google OAuth 2.0 Credentials
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:5000/api/v1/google/callback
 ```
 
 ### 3. PostgreSQL Setup & Migrations
 
 ```bash
-# Apply all database migrations (001, 002, 003)
+# Apply all database migrations (001, 002, 003, 004)
 npm run db:migrate
 
 # Inspect migration status
@@ -235,13 +278,8 @@ npm run db:status
 ### 4. Run Comprehensive Verification Tests
 
 ```bash
-# Run all tests (migration engine, tenant isolation, auth & team RBAC)
+# Run all tests (tenant isolation, auth & team RBAC, client/location CRUD, Google OAuth & GBP)
 npm test
-
-# Run individual test suites
-npm run test:auth
-npm run test:tenant
-npm run test:migrator
 ```
 
 ### 5. Start Backend API Server
@@ -256,7 +294,7 @@ The API server starts on `http://localhost:5000`. Health check is available at `
 ```bash
 npm run dev:frontend
 ```
-The Vite dashboard starts on `http://localhost:5173`. If not logged in, you will be prompted with the secure Sign-In screen with 1-click Demo credentials.
+The Vite dashboard starts on `http://localhost:5173`.
 
 ---
 
@@ -265,9 +303,9 @@ The Vite dashboard starts on `http://localhost:5173`. If not logged in, you will
 - **Phase 0**: Project Foundation *(Completed)*
 - **Phase 1**: Database Setup & Core Tenant Models *(Completed)*
 - **Phase 2**: Authentication & Team RBAC *(Completed)*
-- **Phase 3**: Client & Location Management CRUD *(Next)*
-- **Phase 4**: Google Cloud OAuth 2.0 & GBP API Integration
-- **Phase 5**: Review Management & AI Replies
+- **Phase 3**: Client & Location Management CRUD *(Completed)*
+- **Phase 4**: Google Cloud OAuth 2.0 & GBP API Integration *(Completed)*
+- **Phase 5**: Review Management & AI Replies *(Next)*
 - **Phase 6**: Post Scheduling & Media Library
 - **Phase 7**: Analytics & Automated Client Reporting
 - **Phase 8**: Billing, Subscriptions & White-Labeling
