@@ -4,9 +4,11 @@ import { runAuthRbacVerification } from './auth-rbac.test.js';
 import { runClientLocationCrudVerification } from './client-location-crud.test.js';
 import { runGoogleOAuthGbpVerification } from './google-oauth-gbp.test.js';
 import { runReviewRepositoryVerification } from './review-repository.test.js';
+import { runMilestone3Steps1To3Verification } from './review-milestone3-steps1-3.test.js';
+import { runMilestone3ServicesVerification } from './review-milestone3-services.test.js';
 
 async function runAllTests() {
-  console.log('🚀 Running Complete Test Suite (Phases 0, 1, 2, 3, 4 & 5-M2)...\n');
+  console.log('🚀 Running Complete Test Suite (Phases 0, 1, 2, 3, 4 & 5-M3)...\n');
 
   try {
     console.log('===========================================================');
@@ -40,7 +42,17 @@ async function runAllTests() {
     await runReviewRepositoryVerification();
 
     console.log('\n===========================================================');
-    console.log('🎉 ALL TESTS PASSED SUCCESSFULLY! (PHASES 0, 1, 2, 3, 4 & 5-M2)');
+    console.log('7. Phase 5 Milestone 3 (Steps 1-3: Permissions, AI, Google Review Client)');
+    console.log('===========================================================');
+    await runMilestone3Steps1To3Verification();
+
+    console.log('\n===========================================================');
+    console.log('8. Phase 5 Milestone 3 (Steps 4-5: ReviewService & ReviewReplyWorkflowService)');
+    console.log('===========================================================');
+    await runMilestone3ServicesVerification();
+
+    console.log('\n===========================================================');
+    console.log('🎉 ALL TESTS PASSED SUCCESSFULLY! (PHASES 0, 1, 2, 3, 4 & 5-M3)');
     console.log('===========================================================');
     process.exit(0);
   } catch (err) {
