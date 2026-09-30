@@ -7,6 +7,7 @@ import { TeamManagementView } from './components/team/TeamManagementView.jsx';
 import { ClientManagementView } from './components/client/ClientManagementView.jsx';
 import { LocationManagementView } from './components/location/LocationManagementView.jsx';
 import { GoogleConnectionView } from './components/google/GoogleConnectionView.jsx';
+import { ReviewsManagementView } from './components/review/ReviewsManagementView.jsx';
 import { LoginView } from './components/auth/LoginView.jsx';
 import {
   getBackendHealth,
@@ -253,11 +254,23 @@ export function App() {
                       </span>
                     </td>
                   </tr>
-                  <tr>
-                    <td style={{ padding: '12px 14px', fontFamily: 'JetBrains Mono', color: 'var(--text-subtle)' }}>Phase 5+</td>
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+                    <td style={{ padding: '12px 14px', fontFamily: 'JetBrains Mono', color: '#6366f1' }}>Phase 5</td>
                     <td style={{ padding: '12px 14px', fontWeight: 600 }}>Reviews & AI Replies</td>
                     <td style={{ padding: '12px 14px', color: 'var(--text-muted)' }}>
                       Review synchronization, sentiment analysis, AI automated reply generation & approval flows
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', padding: '3px 8px', borderRadius: 4 }}>
+                        ✓ Completed
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '12px 14px', fontFamily: 'JetBrains Mono', color: 'var(--text-subtle)' }}>Phase 6+</td>
+                    <td style={{ padding: '12px 14px', fontWeight: 600 }}>Post Scheduling & Analytics</td>
+                    <td style={{ padding: '12px 14px', color: 'var(--text-muted)' }}>
+                      Media publishing, automated local SEO scheduling, performance metrics & rank tracking
                     </td>
                     <td style={{ padding: '12px 14px' }}>
                       <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Future</span>
@@ -299,6 +312,13 @@ export function App() {
 
       {currentView === 'gbp' && (
         <GoogleConnectionView
+          currentUser={currentUser}
+          currentAgency={currentAgency}
+        />
+      )}
+
+      {currentView === 'reviews' && (
+        <ReviewsManagementView
           currentUser={currentUser}
           currentAgency={currentAgency}
         />

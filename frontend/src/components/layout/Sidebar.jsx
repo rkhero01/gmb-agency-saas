@@ -6,7 +6,7 @@ const NAV_ITEMS = [
   { id: 'clients', label: 'Clients', icon: '🏢', tag: 'Phase 3' },
   { id: 'locations', label: 'Locations', icon: '📍', tag: 'Phase 3' },
   { id: 'gbp', label: 'Google Profiles', icon: '🌐', tag: 'Phase 4' },
-  { id: 'reviews', label: 'Reviews & Replies', icon: '⭐', isFuture: true, tag: 'Phase 5' },
+  { id: 'reviews', label: 'Reviews & Replies', icon: '⭐', tag: 'Phase 5' },
   { id: 'posts', label: 'Post Scheduling', icon: '📅', isFuture: true, tag: 'Phase 6' },
   { id: 'analytics', label: 'Analytics & Reports', icon: '📈', isFuture: true, tag: 'Phase 7' },
 ];
@@ -66,10 +66,10 @@ export function Sidebar({
                 <span
                   className="badge-future"
                   style={{
-                    backgroundColor: ['team', 'clients', 'locations', 'gbp'].includes(item.id)
+                    backgroundColor: ['team', 'clients', 'locations', 'gbp', 'reviews'].includes(item.id)
                       ? 'rgba(99, 102, 241, 0.2)'
                       : undefined,
-                    color: ['team', 'clients', 'locations', 'gbp'].includes(item.id)
+                    color: ['team', 'clients', 'locations', 'gbp', 'reviews'].includes(item.id)
                       ? '#a5b4fc'
                       : undefined,
                   }}
