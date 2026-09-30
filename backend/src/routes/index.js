@@ -5,6 +5,7 @@ import teamRoutes from './team.routes.js';
 import clientRoutes from './client.routes.js';
 import locationRoutes from './location.routes.js';
 import googleRoutes from './google.routes.js';
+import reviewRoutes from './review.routes.js';
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.use('/team', teamRoutes);
 router.use('/clients', clientRoutes);
 router.use('/locations', locationRoutes);
 router.use('/google', googleRoutes);
+router.use('/reviews', reviewRoutes);
 
 // Root API information endpoint
 router.get('/', (req, res) => {
@@ -61,6 +63,20 @@ router.get('/', (req, res) => {
         locations: '/api/v1/google/locations',
         linkLocation: '/api/v1/google/locations/:locationId/link',
         disconnect: '/api/v1/google/disconnect',
+      },
+      reviews: {
+        list: '/api/v1/reviews',
+        stats: '/api/v1/reviews/stats',
+        get: '/api/v1/reviews/:reviewId',
+        updateStatus: '/api/v1/reviews/:reviewId/status',
+        syncLocation: '/api/v1/locations/:locationId/reviews/sync',
+        aiSuggestion: '/api/v1/reviews/:reviewId/reply/ai-suggestion',
+        draft: '/api/v1/reviews/:reviewId/reply/draft',
+        submitApproval: '/api/v1/reviews/:reviewId/reply/submit-approval',
+        approve: '/api/v1/reviews/:reviewId/reply/approve',
+        reject: '/api/v1/reviews/:reviewId/reply/reject',
+        publish: '/api/v1/reviews/:reviewId/reply/publish',
+        deleteReply: '/api/v1/reviews/:reviewId/reply',
       },
     },
   });

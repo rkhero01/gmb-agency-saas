@@ -6,9 +6,10 @@ import { runGoogleOAuthGbpVerification } from './google-oauth-gbp.test.js';
 import { runReviewRepositoryVerification } from './review-repository.test.js';
 import { runMilestone3Steps1To3Verification } from './review-milestone3-steps1-3.test.js';
 import { runMilestone3ServicesVerification } from './review-milestone3-services.test.js';
+import { runReviewApiVerification } from './review-api.test.js';
 
 async function runAllTests() {
-  console.log('🚀 Running Complete Test Suite (Phases 0, 1, 2, 3, 4 & 5-M3)...\n');
+  console.log('🚀 Running Complete Test Suite (Phases 0, 1, 2, 3, 4 & 5-API)...\n');
 
   try {
     console.log('===========================================================');
@@ -52,7 +53,12 @@ async function runAllTests() {
     await runMilestone3ServicesVerification();
 
     console.log('\n===========================================================');
-    console.log('🎉 ALL TESTS PASSED SUCCESSFULLY! (PHASES 0, 1, 2, 3, 4 & 5-M3)');
+    console.log('9. Phase 5 API Layer Integration Tests (Review & Reply Workflow Endpoints)');
+    console.log('===========================================================');
+    await runReviewApiVerification();
+
+    console.log('\n===========================================================');
+    console.log('🎉 ALL TESTS PASSED SUCCESSFULLY! (PHASES 0, 1, 2, 3, 4 & 5-API)');
     console.log('===========================================================');
     process.exit(0);
   } catch (err) {

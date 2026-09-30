@@ -5,6 +5,7 @@ import {
   updateLocation,
   deleteLocation,
 } from '../controllers/location.controller.js';
+import { syncLocationReviews } from '../controllers/review.controller.js';
 import {
   authenticate,
   authorizePermissions,
@@ -31,5 +32,12 @@ router.patch('/:locationId', authorizePermissions(PERMISSIONS.LOCATION_UPDATE), 
 
 // DELETE /api/v1/locations/:locationId - Delete location
 router.delete('/:locationId', authorizePermissions(PERMISSIONS.LOCATION_DELETE), deleteLocation);
+
+// POST /api/v1/locations/:locationId/reviews/sync - Synchronize reviews from Google Business Profile
+router.post(
+  '/:locationId/reviews/sync',
+  authorizePermissions(PERMISSIONS.REVIEW_SYNC),
+  syncLocationReviews
+);
 
 export default router;
