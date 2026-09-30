@@ -3,9 +3,10 @@ import { runTenantIsolationVerification } from './tenant-isolation.test.js';
 import { runAuthRbacVerification } from './auth-rbac.test.js';
 import { runClientLocationCrudVerification } from './client-location-crud.test.js';
 import { runGoogleOAuthGbpVerification } from './google-oauth-gbp.test.js';
+import { runReviewRepositoryVerification } from './review-repository.test.js';
 
 async function runAllTests() {
-  console.log('🚀 Running Complete Test Suite (Phases 0, 1, 2, 3 & 4)...\n');
+  console.log('🚀 Running Complete Test Suite (Phases 0, 1, 2, 3, 4 & 5-M2)...\n');
 
   try {
     console.log('===========================================================');
@@ -34,7 +35,12 @@ async function runAllTests() {
     await runGoogleOAuthGbpVerification();
 
     console.log('\n===========================================================');
-    console.log('🎉 ALL TESTS PASSED SUCCESSFULLY! (PHASES 0, 1, 2, 3 & 4)');
+    console.log('6. Phase 5 Review & Reply Data Access Repository Tests');
+    console.log('===========================================================');
+    await runReviewRepositoryVerification();
+
+    console.log('\n===========================================================');
+    console.log('🎉 ALL TESTS PASSED SUCCESSFULLY! (PHASES 0, 1, 2, 3, 4 & 5-M2)');
     console.log('===========================================================');
     process.exit(0);
   } catch (err) {
